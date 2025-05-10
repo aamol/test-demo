@@ -1,0 +1,22 @@
+# Prometheus configuration file
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Java application metrics
+  - job_name: 'java-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['java-app:8080']
+
+  # Node exporter for host metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
