@@ -1,0 +1,7 @@
+
+This project showcases the following DevOps practices:
+
+- **CI/CD**: Automated testing and deployment pipeline with GitHub Actions
+- **Containerization**: Docker setup with multi-stage builds
+- **Infrastructure as Code**: Terraform scripts for AWS deployment
+- **Monitoring & Logging**: Prometheus and ELK stack integration
