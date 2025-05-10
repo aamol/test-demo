@@ -1,0 +1,159 @@
+pipeline {
+    agent {
+        // Use Docker to ensure consistent build environment
+        docker {
+            image 'maven:3.8.6-openjdk-11'
+            args '-v $HOME/.m2:/root/.m2'
+        }
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                // Get code from repository
+                checkout scm
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                // Build the application
+                sh 'mvn clean compile'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                // Run tests
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    // Publish test results
+                    junit '**/target/surefire-reports/*.xml'
+                    
+                    // Publish code coverage
+                    jacoco(
+                        execPattern: '**/target/jacoco.exec',
+                        classPattern: '**/target/classes',
+                        sourcePattern: '**/src/main/java'
+                    )
+                }
+            }
+        }
+        
+        stage('Code Quality') {
+            steps {
+                // Run SonarQube analysis
+                withSonarQubeEnv('SonarCloud') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                // Run OWASP dependency check
+                sh 'mvn org.owasp:dependency-check-maven:check'
+            }
+            post {
+                always {
+                    // Publish security scan results
+                    dependencyCheckPublisher pattern: '**/target/dependency-check-report.xml'
+                }
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                // Package the application
+                sh 'mvn package -DskipTests'
+                
+                // Archive the artifacts
+                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                // Build Docker image
+                sh 'docker build -t java-cicd-demo:$BUILD_NUMBER -f docker/Dockerfile .'
+            }
+        }
+        
+        stage('Deploy to Dev') {
+            steps {
+                // Deploy to development environment
+                sh '''
+                    docker stop java-cicd-demo-dev || true
+                    docker rm java-cicd-demo-dev || true
+                    docker run -d --name java-cicd-demo-dev -p 8080:8080 java-cicd-demo:$BUILD_NUMBER
+                '''
+            }
+        }
+        
+        stage('Integration Test') {
+            steps {
+                // Run integration tests against the deployed app
+                sh 'curl -f http://localhost:8080/health || (docker logs java-cicd-demo-dev && exit 1)'
+            }
+        }
+        
+        stage('Push to Registry') {
+            when {
+                branch 'main'
+            }
+            steps {
+                // Push Docker image to registry
+                withCredentials([usernamePassword(credentialsId: 'docker-registry', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        docker tag java-cicd-demo:$BUILD_NUMBER example.com/java-cicd-demo:latest
+                        docker tag java-cicd-demo:$BUILD_NUMBER example.com/java-cicd-demo:$BUILD_NUMBER
+                        docker login -u $DOCKER_USER -p $DOCKER_PASS example.com
+                        docker push example.com/java-cicd-demo:latest
+                        docker push example.com/java-cicd-demo:$BUILD_NUMBER
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                branch 'main'
+            }
+            steps {
+                // Deploy to production using Terraform
+                dir('terraform') {
+                    sh '''
+                        terraform init
+                        terraform plan -out=tfplan
+                        terraform apply -auto-approve tfplan
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up Docker containers
+            sh '''
+                docker stop java-cicd-demo-dev || true
+                docker rm java-cicd-demo-dev || true
+            '''
+            
+            // Clean up workspace
+            cleanWs()
+        }
+        
+        success {
+            // Send notification on success
+            echo 'Build and deployment successful!'
+        }
+        
+        failure {
+            // Send notification on failure
+            echo 'Build or deployment failed!'
+        }
+    }
+}
