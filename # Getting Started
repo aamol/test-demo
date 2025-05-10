@@ -1,0 +1,13 @@
+
+1. Clone the repository
+2. Build the application: `mvn clean package`
+3. Run locally: `java -jar target/java-cicd-demo.jar`
+4. Explore the CI/CD pipelines in `.github/workflows/`, `Jenkinsfile`, and `.gitlab-ci.yml`
+
+## Key Features
+
+- Automated testing (unit, integration)
+- Containerized builds and deployments
+- Infrastructure as Code for consistent environments
+- Comprehensive monitoring and logging
+- Security scanning in the pipeline
