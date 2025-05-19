@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Rule files specify how collected metrics are aggregated
+rule_files:
+  - "ai_alert_rules.yml"
+
+# Scrape configuration for our Java application
+scrape_configs:
+  - job_name: 'spring-actuator'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['localhost:8080']
+
+  - job_name: 'ai-model-metrics'
+    metrics_path: '/actuator/prometheus/ai'
+    static_configs:
+      - targets: ['localhost:8080']
+
+# AI-enhanced alerting configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - 'alertmanager:9093'
