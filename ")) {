@@ -1,0 +1,3 @@
+            generatedCode = generatedCode.substring(3);
+        }
+        if (generatedCode.endsWith("
