@@ -1,0 +1,40 @@
+groups:
+- name: AiEnhancedAlerts
+  rules:
+  
+  # AI-powered anomaly detection rules
+  - alert: AiDetectedCpuAnomaly
+    expr: rate(process_cpu_usage[5m]) > 0.8 and ai_anomaly_score{metric="cpu"} > 0.7
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "AI has detected anomalous CPU usage"
+      description: "The application's CPU usage is showing an unusual pattern with an anomaly score of {{ $value }}."
+
+  - alert: AiPredictedMemoryLeak
+    expr: process_resident_memory_bytes / process_virtual_memory_bytes > 0.7 and ai_prediction_score{prediction="memory_leak"} > 0.8
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "AI has predicted a potential memory leak"
+      description: "Memory usage patterns suggest a memory leak with prediction confidence {{ $value }}."
+
+  - alert: AiDetectedApiLatencyAnomaly
+    expr: http_server_requests_seconds_max{uri!~".*actuator.*"} > 1 and ai_anomaly_score{metric="api_latency"} > 0.6
+    for: 3m
+    labels:
+      severity: warning
+    annotations:
+      summary: "AI has detected API latency anomalies"
+      description: "Unusual API response time patterns detected with an anomaly score of {{ $value }}."
+      
+  - alert: AiPredictedServiceDegradation
+    expr: ai_prediction_score{prediction="service_degradation"} > 0.75
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "AI has predicted potential service degradation"
+      description: "Service metrics suggest potential upcoming degradation with {{ $value }} confidence."
