@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: ai-driven-devops
+  profiles:
+    active: dev
+    
+server:
+  port: 8080
+  
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+        
+ai:
+  codegen:
+    enabled: true
+  monitoring:
+    anomaly-detection:
+      enabled: true
+      model-path: classpath:models/anomaly_detection_model.pkl
+      threshold: 0.7
+  incident:
+    prediction:
+      enabled: true
+      model-path: classpath:models/prediction_model.h5
+  cicd:
+    risk-assessment:
+      enabled: true
+      models-dir: classpath:models/cicd/
+  testing:
+    auto-generation:
+      enabled: true
+      
+logging:
+  level:
+    root: INFO
+    com.example.aidevops: DEBUG
+    org.springframework.web: INFO
