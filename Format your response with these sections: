@@ -1,0 +1,136 @@
+- Summary: Brief overview of the code quality
+- Issues: List of potential bugs or issues (if any)
+- Improvements: Suggested improvements
+- Security: Security concerns (if any)
+- Best Practices: Adherence to best practices
+"""
+
+        try:
+            # Call OpenAI API
+            response = openai.ChatCompletion.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are an expert code reviewer for Java and DevOps tools."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=2000
+            )
+            
+            # Extract and return the review
+            return response.choices[0].message['content']
+        except Exception as e:
+            return f"Error reviewing file {file_path}: {str(e)}"
+    
+    def review_multiple_files(self, file_paths):
+        """Review multiple files and generate a combined report"""
+        reviews = {}
+        
+        for file_path in file_paths:
+            # Skip non-code files
+            if not self._is_code_file(file_path):
+                continue
+                
+            print(f"Reviewing {file_path}...")
+            review = self.review_file(file_path)
+            reviews[file_path] = review
+            
+        return reviews
+    
+    def _get_language(self, extension):
+        """Map file extension to language name"""
+        mapping = {
+            '.java': 'java',
+            '.py': 'python',
+            '.js': 'javascript',
+            '.html': 'html',
+            '.css': 'css',
+            '.xml': 'xml',
+            '.yml': 'yaml',
+            '.yaml': 'yaml',
+            '.json': 'json',
+            '.md': 'markdown',
+            '.sh': 'bash',
+            '.properties': 'properties'
+        }
+        return mapping.get(extension, 'text')
+    
+    def _is_code_file(self, file_path):
+        """Determine if a file should be code-reviewed"""
+        excluded_patterns = [
+            r'\.git/',
+            r'\.idea/',
+            r'\.vscode/',
+            r'target/',
+            r'build/',
+            r'node_modules/',
+            r'\.(jpg|jpeg|png|gif|ico|svg)$',
+            r'\.(zip|tar|gz|rar)$',
+            r'\.(jar|war|ear)$',
+            r'\.(pdf|doc|docx|ppt|pptx|xls|xlsx)$',
+            r'\.(class)$'
+        ]
+        
+        # Check if file matches any excluded pattern
+        for pattern in excluded_patterns:
+            if re.search(pattern, file_path):
+                return False
+                
+        # Consider it a code file if it has a file extension
+        return os.path.splitext(file_path)[1] != ''
+
+def format_report_markdown(reviews):
+    """Format review results as a Markdown document"""
+    report = ["# AI Code Review Report\n"]
+    
+    # Summary section
+    report.append("## Summary\n")
+    report.append(f"Reviewed {len(reviews)} files.\n")
+    
+    # File reviews
+    for file_path, review in reviews.items():
+        report.append(f"\n## {file_path}\n")
+        report.append(review)
+        report.append("\n---\n")
+    
+    return "\n".join(report)
+
+def main():
+    parser = argparse.ArgumentParser(description='AI-powered code review tool')
+    parser.add_argument('--files', required=True, help='Path to file containing list of files to review, or a directory')
+    parser.add_argument('--output', help='Path to output file for review results')
+    parser.add_argument('--model', default='gpt-4', help='OpenAI model to use for code review')
+    
+    args = parser.parse_args()
+    
+    # Initialize reviewer
+    reviewer = AICodeReviewer(model=args.model)
+    
+    # Get files to review
+    files_to_review = []
+    if os.path.isdir(args.files):
+        # If input is a directory, find all code files recursively
+        for root, dirs, files in os.walk(args.files):
+            for file in files:
+                file_path = os.path.join(root, file)
+                files_to_review.append(file_path)
+    else:
+        # Input is a file listing files to review
+        with open(args.files, 'r') as f:
+            files_to_review = [line.strip() for line in f if line.strip()]
+    
+    # Review files
+    review_results = reviewer.review_multiple_files(files_to_review)
+    
+    # Format as Markdown
+    report = format_report_markdown(review_results)
+    
+    # Output results
+    if args.output:
+        with open(args.output, 'w') as f:
+            f.write(report)
+    else:
+        print(report)
+
+if __name__ == "__main__":
+    main()
